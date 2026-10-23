@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#090d18">
+<title>Yuxora — One platform. Your world.</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+:root {
+  --bg:#090d18;
+  --panel:#111a2c;
+  --border:#24334b;
+  --cyan:#42e8f5;
+  --purple:#9b7bff;
+  --text:#f4f7ff;
+  --muted:#9baac3;
+  --danger:#ff8c9a;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:system-ui,Arial,sans-serif
+}
+header{
+  padding:15px max(16px,calc((100vw - 680px)/2));
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;background:#090d18f5;
+  backdrop-filter:blur(12px);z-index:5
+}
+.brand{font-size:25px;font-weight:900;letter-spacing:1px;color:var(--cyan)}
+.tagline{font-size:12px;color:var(--muted);margin-top:3px}
+main{width:min(680px,100%);margin:auto;padding:16px 12px 40px}
+.panel,.post{
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:17px;padding:16px;margin-bottom:14px
+}
+h2{margin:0 0 12px;font-size:20px}
+p{line-height:1.45}
+label{display:block;margin-top:8px;font-size:13px;color:var(--muted)}
+input,textarea,select,button{
+  width:100%;padding:12px;margin:5px 0;
+  border-radius:10px;font:inherit
+}
+input,textarea,select{
+  background:#0a1221;color:var(--text);border:1px solid var(--border)
+}
+textarea{min-height:85px;resize:vertical}
+button{background:var(--cyan);color:#06121b;font-weight:750;border:0;cursor:pointer}
+button:disabled{opacity:.55;cursor:wait}
+button.secondary{background:#202d45;color:var(--text);border:1px solid var(--border)}
+button.danger{background:#3b1f30;color:#ffdce1;border:1px solid #653246}
+.row{display:flex;gap:8px;align-items:center}
+.row>*{flex:1;min-width:0}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:12px}
+.tabs button{font-size:13px;padding:11px 4px}
+.muted{color:var(--muted);font-size:13px}
+.hidden{display:none!important}
+.status{margin:8px 0 14px;line-height:1.45;font-size:14px}
+.error{color:#ff9292}
+.success{color:#73f0b0}
+.post-meta{color:var(--cyan);font-size:12px;margin-bottom:8px}
+.post-content{white-space:pre-wrap;overflow-wrap:anywhere;margin:10px 0}
+.post-image{
+  display:block;width:100%;max-height:520px;object-fit:contain;
+  border-radius:12px;background:#080b12;margin:10px 0
+}
+.post-actions{display:flex;gap:8px;margin-top:10px}
+.post-actions button{font-size:13px;padding:9px}
+.tiny{font-size:11px;color:var(--muted)}
+.checkline{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)}
+.checkline input{width:auto}
+a{color:var(--cyan)}
+.foot{font-size:12px;color:var(--muted);text-align:center;padding:12px}
+</style>
+</head>
+
+<body>
+<header>
+  <div class="brand">YUXORA</div>
+  <div class="tagline">One platform. Your world.</div>
+</header>
+
+<main>
+<div id="status" class="status" role="status" aria-live="polite"></div>
+
+<section id="setup" class="panel">
+  <h2>Connect Yuxora</h2>
+  <p class="muted">
+    Enter your Supabase project URL and publishable key.
+    Never use a secret or service-role key in this page.
+  </p>
+
+  <label for="projectUrl">Supabase project URL</label>
+  <input id="projectUrl" placeholder="https://your-project.supabase.co" autocomplete="url">
+
+  <label for="publicKey">Supabase publishable key</label>
+  <input id="publicKey" placeholder="sb_publishable_..." autocomplete="off">
+
+  <button id="connectBtn">Connect online</button>
+
+  <p class="muted">
+    Run the supplied SQL setup in Supabase SQL Editor.
+    Create the private storage bucket named yuxora-images.
+  </p>
+</section>
+
+<section id="auth" class="panel hidden">
+  <h2 id="authTitle">Join Yuxora</h2>
+  <p class="muted">Use a strong, unique password. Email confirmation may be required.</p>
+
+  <form id="authForm">
+    <label for="username">Username (3–30 letters, numbers, underscores)</label>
+    <input id="username" maxlength="30" autocomplete="username" placeholder="Choose a username">
+
+    <label for="email">Email</label>
+    <input id="email" type="email" autocomplete="email" required placeholder="you@example.com">
+
+    <label for="password">Password</label>
+    <input id="password" type="password" autocomplete="current-password"
+      minlength="8" required placeholder="At least 8 characters">
+
+    <button id="authSubmit" type="submit">Create account</button>
+  </form>
+
+  <button class="secondary" id="switchAuth" type="button">
+    Already have an account? Sign in
+  </button>
+</section>
+
+<section id="app" class="hidden">
+  <div class="panel">
+    <div id="welcomeUser"></div>
+    <p class="muted">
+      Choose a few interests to help personalize your feed.
+      Your feed can still include fresh discoveries.
+    </p>
+
+    <label for="interests">Interests (comma-separated)</label>
+    <input id="interests" maxlength="250" placeholder="football, art, comedy, science">
+
+    <div class="row">
+      <button id="saveInterests" type="button">Save interests</button>
+      <button class="secondary" id="logoutBtn" type="button">Sign out</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button data-feed="ForYou">For You</button>
+    <button data-feed="Following">Following</button>
+    <button data-feed="Latest">Latest</button>
+  </div>
+
+  <section class="panel">
+    <h2>Create on Yuxora</h2>
+
+    <form id="postForm">
+      <label for="postType">Post type</label>
+      <select id="postType">
+        <option value="Posts">Posts — text updates</option>
+        <option value="Favro">Favro — video (text placeholder for now)</option>
+        <option value="Favee">Favee — photo</option>
+      </select>
+
+      <label for="postContent">Caption or message</label>
+      <textarea id="postContent" maxlength="2000"
+        placeholder="Share something meaningful..."></textarea>
+
+      <label for="photoFile">Choose a photo (optional)</label>
+      <input id="photoFile" type="file" accept="image/jpeg,image/png,image/webp">
+
+      <div class="tiny">
+        Images only: JPG, PNG or WebP, up to 5 MB.
+        Do not upload private information or pictures of someone without permission.
+      </div>
+
+      <label class="checkline">
+        <input id="contentNotice" type="checkbox" required>
+        I have the right to share this content and it follows Yuxora's community rules.
+      </label>
+
+      <button id="publishBtn" type="submit">Publish online</button>
+    </form>
+
+    <p class="muted">
+      This starter supports text and photos. Real video upload/playback,
+      comments, moderation queues, and production anti-abuse controls are future steps.
+    </p>
+  </section>
+
+  <h2 id="feedTitle">Your feed</h2>
+  <div id="feed"></div>
+  <button class="secondary" id="refreshBtn" type="button">Refresh feed</button>
+</section>
+
+<div class="foot">
+  Yuxora is an early prototype, not yet a production-secure social network.
+  Use test accounts until you finish testing policies and moderation.
+</div>
+</main>
+
+<script>
+"use strict";
+
+const $ = id => document.getElementById(id);
+
+let client = null;
+let currentUser = null;
+let currentFeed = "ForYou";
+let signingUp = true;
+let busy = false;
+let followingIds = new Set();
+let likedIds = new Set();
+let interestWords = [];
+
+function message(t, type = "") {
+  $("status").textContent = t;
+  $("status").className = "status " + type;
+}
+
+function show(which) {
+  ["setup", "auth", "app"].forEach(id => {
+    $(id).classList.toggle("hidden", id !== which);
+  });
+}
+
+function updateAuthMode() {
+  $("authTitle").textContent = signingUp ? "Join Yuxora" : "Welcome back";
+  $("authSubmit").textContent = signingUp ? "Create account" : "Sign in";
+
+  $("switchAuth").textContent = signingUp
+    ? "Already have an account? Sign in"
+    : "New to Yuxora? Create an account";
+
+  $("username").required = signingUp;
+  $("username").disabled = !signingUp;
+}
+
+function validProjectUrl(url) {
+  try {
+    const u = new URL(url);
+    return u.protocol === "https:" &&
+      u.hostname.endsWith(".supabase.co") &&
+      u.username === "" &&
+      u.password === "";
+  } catch {
+    return false;
+  }
+}
+
+async function connect() {
+  const url = $("projectUrl").value.trim().replace(/\/+$/, "");
+  const key = $("publicKey").value.trim();
+
+  if (!validProjectUrl(url) || !key) {
+    message("Enter a valid https://…supabase.co URL and your publishable key.", "error");
+    return;
+  }
+
+  try {
+    client = window.supabase.createClient(url, key, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
+      }
+    });
+
+    message("Checking connection…");
+
+    const { data, error } = await client.auth.getSession();
+    if (error) throw error;
+
+    localStorage.setItem("yuxora_url", url);
+    localStorage.setItem("yuxora_key", key);
+
+    await handleSession(data.session);
+
+    if (!data.session) {
+      show("auth");
+      message("Connected. Sign in or create your account.", "success");
+    }
+  } catch (e) {
+    client = null;
+    message("Connection failed: " + e.message, "error");
+  }
+}
+
+async function handleSession(session) {
+  currentUser = session?.user || null;
+
+  if (!currentUser) {
+    show("auth");
+    return;
+  }
+
+  const username =
+    currentUser.user_metadata?.username ||
+    currentUser.email?.split("@")[0] ||
+    "Yuxora user";
+
+  $("welcomeUser").textContent = "Welcome, @" + username;
+
+  const stored = localStorage.getItem("yuxora_interests_" + currentUser.id) || "";
+  $("interests").value = stored;
+  interestWords = splitInterests(stored);
+
+  show("app");
+  await loadSocialState();
+  await loadFeed();
+}
+
+function splitInterests(s) {
+  return s.toLowerCase()
+    .split(",")
+    .map(x => x.trim())
+    .filter(Boolean)
+    .slice(0, 20);
+}
+
+async function authenticate(e) {
+  e.preventDefault();
+
+  if (!client) {
+    message("Connect Supabase first.", "error");
+    return;
+  }
+
+  const email = $("email").value.trim();
+  const password = $("password").value;
+  const username = $("username").value.trim();
+
+  if (signingUp && !/^[a-zA-Z0-9_]{3,30}$/.test(username)) {
+    message("Username must be 3–30 letters, numbers or underscores.", "error");
+    return;
+  }
+
+  if (password.length < 8) {
+    message("Use at least 8 characters for your password.", "error");
+    return;
+  }
+
+  $("authSubmit").disabled = true;
+  message(signingUp ? "Creating account…" : "Signing in…");
+
+  try {
+    if (signingUp) {
+      const { data, error } = await client.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { username }
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.session) {
+        await handleSession(data.session);
+        message("Account created.", "success");
+      } else {
+        message(
+          "Account request received. Check your email confirmation, then sign in.",
+          "success"
+        );
+      }
+    } else {
+      const { data, error } = await client.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) throw error;
+
+      await handleSession(data.session);
+      message("Signed in.", "success");
+    }
+  } catch (e) {
+    message(e.message, "error");
+  } finally {
+    $("authSubmit").disabled = false;
+  }
+}
+
+async function loadSocialState() {
+  if (!currentUser) return;
+
+  const [likes, follows] = await Promise.all([
+    client.from("yuxora_likes")
+      .select("post_id")
+      .eq("user_id", currentUser.id),
+
+    client.from("yuxora_follows")
+      .select("following_id")
+      .eq("follower_id", currentUser.id)
+  ]);
+
+  likedIds = new Set((likes.data || []).map(x => x.post_id));
+  followingIds = new Set((follows.data || []).map(x => x.following_id));
+}
+
+/* Yuxora recommendation algorithm.
+   It combines interests, freshness, likes, and followed creators.
+   This is a starter scoring system, not machine learning. */
+
+function scorePost(p) {
+  const text = (p.content || "").toLowerCase();
+
+  const interest = interestWords.some(w => text.includes(w)) ? 3 : 0;
+
+  const ageHours = Math.max(
+    0,
+    (Date.now() - new Date(p.created_at).getTime()) / 3600000
+  );
+
+  const freshness = 2 * Math.exp(-ageHours / 48);
+  const engagement = Math.min(2, Math.log1p(Number(p.like_count || 0)) * 0.5);
+  const followed = followingIds.has(p.user_id) ? 2 : 0;
+  const own = p.user_id === currentUser?.id ? -0.25 : 0;
+
+  return interest + freshness + engagement + followed + own;
+}
+
+async function loadFeed() {
+  if (!client || !currentUser) return;
+
+  $("feedTitle").textContent =
+    currentFeed === "ForYou" ? "For You" :
+    currentFeed === "Following" ? "Following" : "Latest";
+
+  $("feed").innerHTML = '<div class="panel muted">Loading posts…</div>';
+
+  try {
+    let query = client
+      .from("yuxora_posts")
+      .select("id,user_id,username,post_type,content,image_path,created_at,yuxora_likes(count)")
+      .order("created_at", { ascending: false })
+      .limit(80);
+
+    if (currentFeed === "Following") {
+      const ids = [...followingIds];
+
+      if (!ids.length) {
+        $("feed").innerHTML =
+          '<div class="panel">Follow creators to build this feed. Try For You or Latest.</div>';
+        return;
+      }
+
+      query = query.in("user_id", ids);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    let posts = (data || []).map(p => ({
+      ...p,
+      like_count: p.yuxora_likes?.[0]?.count || 0
+    }));
+
+    if (currentFeed === "ForYou") {
+      posts.sort((a, b) => scorePost(b) - scorePost(a));
+
+      // Keep the feed varied by limiting consecutive posts from one creator.
+      const mixed = [];
+      const remaining = [...posts];
+      let last = "";
+      let streak = 0;
+
+      while (remaining.length) {
+        let idx = remaining.findIndex(p => p.username !== last || streak < 2);
+        if (idx < 0) idx = 0;
+
+        const p = remaining.splice(idx, 1)[0];
+
+        if (p.username === last) {
+          streak++;
+        } else {
+          last = p.username;
+          streak = 1;
+        }
+
+        mixed.push(p);
+      }
+
+      posts = mixed;
+    }
+
+    if (!posts.length) {
+      $("feed").innerHTML =
+        '<div class="panel">No posts yet. Be one of the first people to share!</div>';
+      return;
+    }
+
+    const rendered = await Promise.all(posts.map(async p => {
+      let imageUrl = "";
+
+      if (p.image_path) {
+        const { data } = await client.storage
+          .from("yuxora-images")
+          .createSignedUrl(p.image_path, 3600);
+
+        imageUrl = data?.signedUrl || "";
+      }
+
+      const isLiked = likedIds.has(p.id);
+      const isOwn = p.user_id === currentUser.id;
+      const isFollowing = followingIds.has(p.user_id);
+
+      return `
+        <article class="post" data-post="${escapeHTML(p.id)}">
+          <div class="post-meta">
+            ${escapeHTML(p.post_type)} · @${escapeHTML(p.username)}
+            · ${escapeHTML(new Date(p.created_at).toLocaleString())}
+          </div>
+
+          ${imageUrl
+            ? `<img class="post-image" src="${escapeHTML(imageUrl)}"
+                alt="Photo shared on Yuxora" loading="lazy">`
+            : ""}
+
+          <p class="post-content">${escapeHTML(p.content || "")}</p>
+
+          <div class="post-actions">
+            <button class="secondary like-btn" data-id="${escapeHTML(p.id)}">
+              ${isLiked ? "♥ Liked" : "♡ Like"} · ${p.like_count}
+            </button>
+
+            ${!isOwn
+              ? `<button class="secondary follow-btn" data-user="${escapeHTML(p.user_id)}">
+                  ${isFollowing ? "Following" : "Follow"}
+                </button>`
+              : ""}
+
+            ${isOwn
+              ? `<button class="danger delete-btn" data-id="${escapeHTML(p.id)}">Delete</button>`
+              : `<button class="secondary report-btn" data-id="${escapeHTML(p.id)}">Report</button>`}
+          </div>
+        </article>`;
+    }));
+
+    $("feed").innerHTML = rendered.join("");
+  } catch (e) {
+    $("feed").innerHTML = "";
+    message(
+      "Could not load feed. Check the SQL setup and storage bucket. " + e.message,
+      "error"
+    );
+  }
+}
+
+function escapeHTML(v) {
+  return String(v ?? "").replace(/[&<>"']/g, c => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[c]);
+}
+
+async function publish(e) {
+  e.preventDefault();
+
+  if (!currentUser || busy) return;
+
+  const content = $("postContent").value.trim();
+  const type = $("postType").value;
+  const file = $("photoFile").files[0];
+
+  if (!content && !file) {
+    message("Add a caption or choose a photo.", "error");
+    return;
+  }
+
+  if (
+    file &&
+    (!["image/jpeg", "image/png", "image/webp"].includes(file.type) ||
+      file.size > 5 * 1024 * 1024)
+  ) {
+    message("Choose a JPG, PNG or WebP image under 5 MB.", "error");
+    return;
+  }
+
+  if (file && type !== "Favee") {
+    message("Choose Favee as the post type when uploading a photo.", "error");
+    return;
+  }
+
+  busy = true;
+  $("publishBtn").disabled = true;
+  message("Publishing…");
+
+  let imagePath = null;
+
+  try {
+    const username =
+      currentUser.user_metadata?.username ||
+      currentUser.email?.split("@")[0] ||
+      "Yuxora user";
+
+    if (file) {
+      const ext = file.type === "image/png" ? "png" :
+        file.type === "image/webp" ? "webp" : "jpg";
+
+      imagePath = `${currentUser.id}/${crypto.randomUUID()}.${ext}`;
+
+      const { error: uploadError } = await client.storage
+        .from("yuxora-images")
+        .upload(imagePath, file, {
+          contentType: file.type,
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+    }
+
+    const { error } = await client.from("yuxora_posts").insert({
+      user_id: currentUser.id,
+      username,
+      post_type: type,
+      content,
+      image_path: imagePath
+    });
+
+    if (error) {
+      if (imagePath) {
+        await client.storage.from("yuxora-images").remove([imagePath]);
+      }
+      throw error;
+    }
+
+    $("postContent").value = "";
+    $("photoFile").value = "";
+    $("contentNotice").checked = false;
+
+    currentFeed = "Latest";
+    await loadFeed();
+    message("Published successfully.", "success");
+  } catch (e) {
+    message("Could not publish: " + e.message, "error");
+  } finally {
+    busy = false;
+    $("publishBtn").disabled = false;
+  }
+}
+
+async function toggleLike(id) {
+  try {
+    if (likedIds.has(id)) {
+      const { error } = await client.from("yuxora_likes")
+        .delete()
+        .eq("post_id", id)
+        .eq("user_id", currentUser.id);
+
+      if (error) throw error;
+      likedIds.delete(id);
+    } else {
+      const { error } = await client.from("yuxora_likes")
+        .insert({ post_id: id, user_id: currentUser.id });
+
+      if (error) throw error;
+      likedIds.add(id);
+    }
+
+    await loadFeed();
+  } catch (e) {
+    message("Like action failed: " + e.message, "error");
+  }
+}
+
+async function toggleFollow(id) {
+  if (id === currentUser.id) return;
+
+  try {
+    if (followingIds.has(id)) {
+      const { error } = await client.from("yuxora_follows")
+        .delete()
+        .eq("follower_id", currentUser.id)
+        .eq("following_id", id);
+
+      if (error) throw error;
+      followingIds.delete(id);
+    } else {
+      const { error } = await client.from("yuxora_follows")
+        .insert({
+          follower_id: currentUser.id,
+          following_id: id
+        });
+
+      if (error) throw error;
+      followingIds.add(id);
+    }
+
+    await loadFeed();
+  } catch (e) {
+    message("Follow action failed: " + e.message, "error");
+  }
+}
+
+async function deletePost(id) {
+  if (!confirm("Delete this post? This cannot be undone.")) return;
+
+  try {
+    const { data, error } = await client.from("yuxora_posts")
+      .delete()
+      .eq("id", id)
+      .select("image_path");
+
+    if (error) throw error;
+
+    for (const p of (data || [])) {
+      if (p.image_path) {
+        await client.storage.from("yuxora-images").remove([p.image_path]);
+      }
+    }
+
+    await loadFeed();
+    message("Post deleted.", "success");
+  } 
